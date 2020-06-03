@@ -17,7 +17,6 @@ import (
 	"github.com/ethersphere/bee/pkg/jsonhttp/jsonhttptest"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/mock"
-	"github.com/ethersphere/bee/pkg/storage"
 	"github.com/ethersphere/bee/pkg/swarm"
 	topmock "github.com/ethersphere/bee/pkg/topology/mock"
 	ma "github.com/multiformats/go-multiaddr"
@@ -45,7 +44,7 @@ func TestConnect(t *testing.T) {
 	}
 
 	testServer := newTestServer(t, testServerOptions{
-		P2P: mock.New(mock.WithConnectFunc(func(ctx context.Context, addr ma.Multiaddr) (*bzz.Address, error) {
+		P2P: mock.New(mock.WithConnectFunc(func(ctx context.Context, addr ma.Multiaddr, _ bool) (*bzz.Address, error) {
 			if addr.String() == errorUnderlay {
 				return nil, testErr
 			}
@@ -57,11 +56,6 @@ func TestConnect(t *testing.T) {
 		jsonhttptest.ResponseDirect(t, testServer.Client, http.MethodPost, "/connect"+underlay, nil, http.StatusOK, debugapi.PeerConnectResponse{
 			Address: overlay.String(),
 		})
-
-		bzzAddr, err := testServer.Addressbook.Get(overlay)
-		if err != nil && errors.Is(err, storage.ErrNotFound) && !bzzAddress.Equal(&bzzAddr) {
-			t.Fatalf("found wrong underlay.  expected: %+v, found: %+v", bzzAddress, bzzAddr)
-		}
 	})
 
 	t.Run("error", func(t *testing.T) {
@@ -79,35 +73,21 @@ func TestConnect(t *testing.T) {
 	})
 
 	t.Run("error - add peer", func(t *testing.T) {
-		disconnectCalled := false
 		testServer := newTestServer(t, testServerOptions{
-			P2P: mock.New(mock.WithConnectFunc(func(ctx context.Context, addr ma.Multiaddr) (*bzz.Address, error) {
+			P2P: mock.New(mock.WithConnectFunc(func(ctx context.Context, addr ma.Multiaddr, _ bool) (*bzz.Address, error) {
 				if addr.String() == errorUnderlay {
 					return nil, testErr
 				}
 				return bzzAddress, nil
-			}), mock.WithDisconnectFunc(func(addr swarm.Address) error {
-				disconnectCalled = true
-				return nil
 			})),
 			TopologyOpts: []topmock.Option{topmock.WithAddPeerErr(testErr)},
 		})
 
-		jsonhttptest.ResponseDirect(t, testServer.Client, http.MethodPost, "/connect"+underlay, nil, http.StatusInternalServerError, jsonhttp.StatusResponse{
+		jsonhttptest.ResponseDirect(t, testServer.Client, http.MethodPost, "/connect"+errorUnderlay, nil, http.StatusInternalServerError, jsonhttp.StatusResponse{
 			Code:    http.StatusInternalServerError,
 			Message: testErr.Error(),
 		})
-
-		bzzAddr, err := testServer.Addressbook.Get(overlay)
-		if err != nil && errors.Is(err, storage.ErrNotFound) && !bzzAddress.Equal(&bzzAddr) {
-			t.Fatalf("found wrong underlay.  expected: %+v, found: %+v", bzzAddress, bzzAddr)
-		}
-
-		if !disconnectCalled {
-			t.Fatalf("disconnect not called.")
-		}
 	})
-
 }
 
 func TestDisconnect(t *testing.T) {

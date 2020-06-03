@@ -17,6 +17,7 @@ import (
 
 	"github.com/ethersphere/bee/pkg/addressbook"
 	"github.com/ethersphere/bee/pkg/api"
+	"github.com/ethersphere/bee/pkg/bzz"
 	"github.com/ethersphere/bee/pkg/crypto"
 	"github.com/ethersphere/bee/pkg/debugapi"
 	"github.com/ethersphere/bee/pkg/hive"
@@ -36,7 +37,6 @@ import (
 	"github.com/ethersphere/bee/pkg/statestore/leveldb"
 	mockinmem "github.com/ethersphere/bee/pkg/statestore/mock"
 	"github.com/ethersphere/bee/pkg/storage"
-	"github.com/ethersphere/bee/pkg/swarm"
 	"github.com/ethersphere/bee/pkg/tags"
 	"github.com/ethersphere/bee/pkg/tracing"
 	"github.com/ethersphere/bee/pkg/validator"
@@ -310,7 +310,7 @@ func NewBee(o Options) (*Bee, error) {
 		b.debugAPIServer = debugAPIServer
 	}
 
-	overlays, err := addressbook.Overlays()
+	addresses, err := addressbook.Addresses()
 	if err != nil {
 		return nil, fmt.Errorf("addressbook overlays: %w", err)
 	}
@@ -318,18 +318,18 @@ func NewBee(o Options) (*Bee, error) {
 	var count int32
 	var wg sync.WaitGroup
 	jobsC := make(chan struct{}, 16)
-	for _, o := range overlays {
+	for _, o := range addresses {
 		jobsC <- struct{}{}
 		wg.Add(1)
-		go func(overlay swarm.Address) {
+		go func(a bzz.Address) {
 			defer func() {
 				<-jobsC
 			}()
 
 			defer wg.Done()
-			if err := topologyDriver.AddPeer(p2pCtx, overlay); err != nil {
-				logger.Debugf("topology add peer fail %s: %v", overlay, err)
-				logger.Errorf("topology add peer %s", overlay)
+			if _, err := p2ps.Connect(p2pCtx, a.Underlay, true); err != nil {
+				logger.Debugf("topology add peer fail %s: %v", a.Overlay, err)
+				logger.Errorf("topology add peer %s", a.Overlay)
 				return
 			}
 
@@ -339,7 +339,7 @@ func NewBee(o Options) (*Bee, error) {
 
 	wg.Wait()
 
-	// Connect bootnodes if no nodes from the addressbook was sucesufully added to topology
+	// Connect bootnodes if no nodes from the addressbook was successfully added to topology
 	if count == 0 {
 		for _, a := range o.Bootnodes {
 			wg.Add(1)
@@ -352,24 +352,9 @@ func NewBee(o Options) (*Bee, error) {
 					return
 				}
 
-				bzzAddr, err := p2ps.Connect(p2pCtx, addr)
+				_, err = p2ps.Connect(p2pCtx, addr, true)
 				if err != nil {
 					logger.Debugf("connect fail %s: %v", a, err)
-					logger.Errorf("connect to bootnode %s", a)
-					return
-				}
-
-				err = addressbook.Put(bzzAddr.Overlay, *bzzAddr)
-				if err != nil {
-					_ = p2ps.Disconnect(bzzAddr.Overlay)
-					logger.Debugf("addressbook error persisting %s %s: %v", a, bzzAddr.Overlay, err)
-					logger.Errorf("connect to bootnode %s", a)
-					return
-				}
-
-				if err := topologyDriver.Connected(p2pCtx, bzzAddr.Overlay); err != nil {
-					_ = p2ps.Disconnect(bzzAddr.Overlay)
-					logger.Debugf("topology connected fail %s %s: %v", a, bzzAddr.Overlay, err)
 					logger.Errorf("connect to bootnode %s", a)
 					return
 				}

@@ -33,7 +33,7 @@ type Options struct {
 	Overlay        swarm.Address
 	P2P            p2p.Service
 	Addressbook    addressbook.GetPutter
-	TopologyDriver topology.Notifier
+	TopologyDriver topology.PeerAdder
 	Storer         storage.Storer
 	Logger         logging.Logger
 	Tags           *tags.Tags
