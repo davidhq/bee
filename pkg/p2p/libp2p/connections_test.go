@@ -157,9 +157,6 @@ func TestMultipleConnectDisconnect(t *testing.T) {
 }
 
 func TestConnectDisconnectOnAllAddresses(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	s1, overlay1 := newService(t, 1, libp2p.Options{})
 
 	s2, overlay2 := newService(t, 1, libp2p.Options{})
@@ -169,7 +166,7 @@ func TestConnectDisconnectOnAllAddresses(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, addr := range addrs {
-		bzzAddr, err := s2.Connect(ctx, addr)
+		bzzAddr, err := s2.Connect(context.Background(), addr)
 		if err != nil {
 			t.Fatal(err)
 		}

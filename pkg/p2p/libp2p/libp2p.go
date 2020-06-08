@@ -309,7 +309,7 @@ func (s *Service) Connect(ctx context.Context, addr ma.Multiaddr) (address *bzz.
 	// Extract the peer ID from the multiaddr.
 	info, err := libp2ppeer.AddrInfoFromP2pAddr(addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("p2p address info: %w", err)
 	}
 
 	if _, found := s.peers.overlay(info.ID); found {
@@ -320,13 +320,13 @@ func (s *Service) Connect(ctx context.Context, addr ma.Multiaddr) (address *bzz.
 		if errors.Is(err, breaker.ErrClosed) {
 			return nil, p2p.NewConnectionBackoffError(err, s.conectionBreaker.ClosedUntil())
 		}
-		return nil, err
+		return nil, fmt.Errorf("libp2p connect: %w", err)
 	}
 
 	stream, err := s.newStreamForPeerID(ctx, info.ID, handshake.ProtocolName, handshake.ProtocolVersion, handshake.StreamName)
 	if err != nil {
 		_ = s.disconnect(info.ID)
-		return nil, err
+		return nil, fmt.Errorf("new stream: %w", err)
 	}
 
 	i, err := s.handshakeService.Handshake(NewStream(stream), stream.Conn().RemoteMultiaddr(), stream.Conn().RemotePeer())
@@ -337,14 +337,14 @@ func (s *Service) Connect(ctx context.Context, addr ma.Multiaddr) (address *bzz.
 
 	if exists := s.peers.addIfNotExists(stream.Conn(), i.BzzAddress.Overlay); exists {
 		if err := helpers.FullClose(stream); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("full close stream on peer exists: %w", err)
 		}
 
 		return i.BzzAddress, nil
 	}
 
 	if err := helpers.FullClose(stream); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("full close stream: %w", err)
 	}
 
 	s.metrics.CreatedConnectionCount.Inc()
