@@ -165,6 +165,7 @@ func TestConnectDisconnectOnAllAddresses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("addresses: %v", addrs)
 	for _, addr := range addrs {
 		bzzAddr, err := s2.Connect(context.Background(), addr)
 		if err != nil {
@@ -184,9 +185,6 @@ func TestConnectDisconnectOnAllAddresses(t *testing.T) {
 }
 
 func TestDoubleConnectOnAllAddresses(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	s1, overlay1 := newService(t, 1, libp2p.Options{})
 
 	s2, overlay2 := newService(t, 1, libp2p.Options{})
@@ -195,15 +193,16 @@ func TestDoubleConnectOnAllAddresses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("addresses: %v", addrs)
 	for _, addr := range addrs {
-		if _, err := s2.Connect(ctx, addr); err != nil {
+		if _, err := s2.Connect(context.Background(), addr); err != nil {
 			t.Fatal(err)
 		}
 
 		expectPeers(t, s2, overlay1)
 		expectPeersEventually(t, s1, overlay2)
 
-		if _, err := s2.Connect(ctx, addr); !errors.Is(err, p2p.ErrAlreadyConnected) {
+		if _, err := s2.Connect(context.Background(), addr); !errors.Is(err, p2p.ErrAlreadyConnected) {
 			t.Fatalf("expected %s error, got %s error", p2p.ErrAlreadyConnected, err)
 		}
 
