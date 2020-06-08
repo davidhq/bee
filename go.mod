@@ -15,17 +15,16 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/ipfs/go-cid v0.0.6 // indirect
 	github.com/ipfs/go-log/v2 v2.1.1 // indirect
-	github.com/libp2p/go-libp2p v0.9.4
+	github.com/libp2p/go-libp2p v0.9.5
 	github.com/libp2p/go-libp2p-autonat-svc v0.1.0
-	github.com/libp2p/go-libp2p-circuit v0.2.3 // indirect
-	github.com/libp2p/go-libp2p-core v0.5.7
-	github.com/libp2p/go-libp2p-peerstore v0.2.4
+	github.com/libp2p/go-libp2p-core v0.6.0
+	github.com/libp2p/go-libp2p-peerstore v0.2.5
 	github.com/libp2p/go-libp2p-quic-transport v0.5.0
-	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
+	github.com/libp2p/go-libp2p-swarm v0.2.7 // indirect
 	github.com/libp2p/go-tcp-transport v0.2.0
 	github.com/libp2p/go-ws-transport v0.3.1
 	github.com/lucas-clemente/quic-go v0.16.1 // indirect
-	github.com/mitchellh/mapstructure v1.3.1 // indirect
+	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/multiformats/go-multistream v0.1.1
